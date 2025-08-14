@@ -1,0 +1,45 @@
+{% extends 'main/base_dashboard.html' %}
+
+{% block title %}🧪 Quizzes{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-fadeIn">
+    <h2 class="text-2xl font-bold text-blue-800">🧪 Quizzes</h2>
+
+    {% if quiz_data %}
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {% for quiz in quiz_data %}
+                <div class="bg-white rounded-2xl shadow-md hover:shadow-xl transition p-5 relative group">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                        {{ quiz.lesson.course.title }}<br>
+                        <span class="text-sm text-gray-500">{{ quiz.lesson.title }}</span>
+                    </h3>
+                    
+                    <div class="space-y-1 text-sm text-gray-600">
+                        <p>Questions: {{ quiz.total_questions }}</p>
+                        <p>Attempted: {{ quiz.total_attempted }}</p>
+                        <p>Correct: {{ quiz.correct_answers }}</p>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="relative w-full h-3 bg-gray-200 rounded-full">
+                            <div class="absolute top-0 left-0 h-3 bg-green-500 rounded-full transition-all duration-700 ease-in-out"
+                                 style="width: {{ quiz.score_percent }}%;">
+                            </div>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">Score: {{ quiz.score_percent }}%</p>
+                    </div>
+
+                    <a href="{% url 'start_quiz' quiz.lesson.id %}" class="mt-4 inline-block bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                        Start Quiz
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+            <p class="text-yellow-800">📚 Complete lessons to unlock quizzes!</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

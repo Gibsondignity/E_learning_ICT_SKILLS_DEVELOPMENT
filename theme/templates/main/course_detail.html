@@ -1,0 +1,73 @@
+{% extends 'main/base_dashboard.html' %} {% block title %}{{ course.title }}{%
+endblock %} {% block content %}
+<div class="animate-slideInUp">
+  <h1 class="text-3xl font-bold text-blue-900 mb-2">{{ course.title }}</h1>
+  <p class="text-gray-700 mb-6">{{ course.description }}</p>
+
+  <h2 class="text-xl font-semibold text-blue-700 mb-4">
+    🎯 Lessons in This Course
+  </h2>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    {% for lesson in lessons %}
+    <div
+      class="bg-gradient-to-br from-blue-50 via-white to-blue-100 p-5 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 group transform hover:-translate-y-1 relative"
+    >
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-lg font-semibold text-blue-800 group-hover:underline">
+          {{ lesson.title }}
+        </h3>
+        <span class="text-sm text-blue-500 font-semibold"
+          >#{{ lesson.order }}</span
+        >
+      </div>
+      <a
+        href="{% url 'lesson_detail' lesson.id %}"
+        class="absolute inset-0 z-10"
+      ></a>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Progress Meter -->
+  <div class="bg-white rounded-xl p-4 shadow-md mb-6">
+    <h3 class="text-lg font-semibold text-green-700 mb-2">📈 Your Progress</h3>
+    <div class="flex justify-between text-sm mb-1">
+      <span
+        >{{ completed_lessons }} / {{ total_lessons }} Lessons Completed</span
+      >
+      <span>{{ progress_percent }}%</span>
+    </div>
+    <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+      <div
+        class="h-3 bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-500"
+        style="width: {{ progress_percent }}%"
+      ></div>
+    </div>
+  </div>
+
+
+  <div class="bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl p-4 shadow-inner text-center mb-6">
+    <h3 class="text-lg font-semibold text-yellow-700">🏅 You Earned a Badge!</h3>
+    <p class="text-sm text-yellow-600">"Starter Learner" — for completing your first lesson.</p>
+</div>
+
+
+  <a
+    href="{% url 'course_list' %}"
+    class="mt-6 inline-block text-blue-600 hover:text-blue-800 transition duration-300 underline"
+    >← Back to All Courses</a
+  >
+</div>
+
+
+{% if next_lesson %}
+<div class="bg-purple-50 p-6 rounded-xl shadow-lg mt-6 animate-slideInUp">
+    <h3 class="text-lg font-semibold text-purple-700 mb-2">🎯 Up Next</h3>
+    <p class="text-gray-700">Continue with the next lesson in your journey:</p>
+    <a href="{% url 'lesson_detail' next_lesson.id %}" class="inline-block mt-3 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-full transition transform hover:scale-105">
+        {{ next_lesson.title }}
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}

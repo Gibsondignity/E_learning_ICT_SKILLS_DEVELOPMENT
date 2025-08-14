@@ -1,0 +1,45 @@
+{% extends 'main/base_dashboard.html' %}
+
+{% block title %}Your Progress & Leaderboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeIn">
+
+    <!-- Student Progress Summary -->
+    <div class="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition">
+        <h2 class="text-xl font-bold text-blue-700 mb-4">📊 Your Progress</h2>
+
+        <div class="mb-3">
+            <p class="text-sm">Lessons Completed</p>
+            <div class="w-full bg-gray-200 h-3 rounded-full">
+                <div class="bg-green-500 h-3 rounded-full transition-all duration-700" style="width: {{ progress_percent }}%"></div>
+            </div>
+            <p class="text-sm mt-1">{{ lessons_completed }} / {{ total_lessons }} lessons ({{ progress_percent }}%)</p>
+        </div>
+
+        <div class="mb-3">
+            <p class="text-sm">Quiz Accuracy</p>
+            <div class="w-full bg-gray-200 h-3 rounded-full">
+                <div class="bg-indigo-500 h-3 rounded-full transition-all duration-700" style="width: {{ quiz_accuracy }}%"></div>
+            </div>
+            <p class="text-sm mt-1">{{ quiz_accuracy }}% correct answers</p>
+        </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition">
+        <h2 class="text-xl font-bold text-purple-700 mb-4">🏆 Leaderboard</h2>
+        <ol class="list-decimal list-inside space-y-2">
+            {% for entry in leaderboard %}
+                <li class="flex justify-between items-center text-sm bg-purple-50 p-3 rounded-lg hover:bg-purple-100">
+                    <span class="font-medium text-purple-800">@{{ entry.student__user__username }}</span>
+                    <span class="text-gray-600">{{ entry.completed_lessons }} lessons</span>
+                </li>
+            {% empty %}
+                <li class="text-gray-500">Leaderboard will appear once students complete lessons.</li>
+            {% endfor %}
+        </ol>
+    </div>
+
+</div>
+{% endblock %}

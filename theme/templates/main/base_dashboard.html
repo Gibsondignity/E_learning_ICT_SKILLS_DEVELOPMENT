@@ -1,0 +1,138 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}Dashboard - E-learning{% endblock %}</title>
+    {% tailwind_css %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {% block extra_head %}{% endblock %}
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <!-- Add inside <head> -->
+    <style>
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes slideInUp {
+        from {
+          transform: translateY(30px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .animate-fadeIn {
+        animation: fadeIn 0.6s ease-out both;
+      }
+      .animate-slideInUp {
+        animation: slideInUp 0.7s ease-out both;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 font-sans text-gray-800 overflow-hidden">
+    <div class="flex flex-row-reverse min-h-screen">
+      <!-- Right Sidebar -->
+      <aside
+        class="w-64 bg-gradient-to-br from-blue-700 to-indigo-800 text-white shadow-xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out hover:translate-x-0 translate-x-0"
+      >
+        <div class="p-6 space-y-4">
+          <h2 class="text-xl font-bold mb-4">📚 My Dashboard</h2>
+          <nav class="space-y-2">
+            <a
+              href="{% url 'dashboard' %}"
+              class="block py-2 px-3 rounded-md hover:bg-blue-600 transition"
+              >🏠 Home</a
+            >
+            <a
+              href="{% url 'course_list' %}"
+              class="block py-2 px-3 rounded-md hover:bg-blue-600 transition"
+              >📘 Course List</a
+            >
+            <a
+              href="{% url 'quizzes' %}"
+              class="block py-2 px-3 rounded-md hover:bg-blue-600 transition"
+              >🧪 Quizzes</a
+            >
+            <a
+              href="{% url 'progress' %}"
+              class="block py-2 px-3 rounded-md hover:bg-blue-600 transition"
+              >📊 Progress</a
+            >
+            <a
+              href="{% url 'ai_recommendations' %}"
+              class="block py-2 px-3 rounded-md hover:bg-blue-600 transition"
+              >🤖 AI Recommendations</a
+            >
+          </nav>
+        </div>
+        <div class="p-6">
+          <a
+            href="{% url 'logout' %}"
+            class="block bg-red-500 text-white text-center py-2 px-3 rounded-md hover:bg-red-600 transition"
+            >Logout</a
+          >
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main
+        class="flex-1 flex flex-col transition-all duration-300 ease-in-out"
+      >
+        <!-- Header -->
+        <header
+          class="bg-white shadow-sm p-6 flex justify-between items-center"
+        >
+          <div>
+            <h1 class="text-2xl font-bold">
+              Welcome, {{ student.full_name|default:"Student" }} 👋
+            </h1>
+            <p class="text-sm text-gray-500">
+              Today is {{ now|date:"l, jS F Y" }}
+            </p>
+          </div>
+          <div class="flex items-center gap-4">
+            <!-- Placeholder for notifications or profile icon -->
+            <div
+              class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold"
+            >
+              {{ student.full_name|slice:":1"|upper }}
+            </div>
+          </div>
+        </header>
+
+        <!-- Content Block -->
+        <section
+          class="p-6 overflow-y-auto h-full transition duration-500 ease-in-out transform"
+        >
+          <div
+            id="mainContent"
+            class="transition-opacity duration-500 opacity-0"
+          >
+            {% block content %}
+            <div class="text-center text-gray-400">
+              <p>
+                This is your learning space. 🚀 Start by exploring a course or
+                checking your progress.
+              </p>
+            </div>
+            {% endblock %}
+          </div>
+        </section>
+      </main>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("mainContent").classList.add("opacity-100");
+      });
+    </script>
+  </body>
+</html>
