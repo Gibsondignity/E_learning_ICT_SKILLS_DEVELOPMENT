@@ -5,6 +5,8 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth.decorators import login_required
 from .utils import recommend_courses_for_student
+from django.contrib import messages
+from django.db import transaction
 
 
 
@@ -52,17 +54,48 @@ def course_detail(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     lessons = course.lessons.all()
 
-    completed_lessons = Progress.objects.filter(student=request.user, lesson__course=course, completed=True).count()
+    # Try to get the Student profile using the correct related_name
+    student = getattr(request.user, 'student_profile', None)
+
+    if not student:
+        # If user has no linked Student profile
+        return render(request, 'main/course_detail.html', {
+            'course': course,
+            'lessons': lessons,
+            'completed_lessons': completed_lessons,
+            'total_lessons': total_lessons,
+            'progress_percent': progress_percent,
+            'badge': badge,
+            'next_lesson': next_lesson,
+            'completed_ids': list(completed_ids),
+            'now': timezone.now(),
+            'student': student,  # 👈 Add this!
+        })
+
+    # Now safely use the student object
+    completed_lessons = Progress.objects.filter(
+        student=student,
+        lesson__course=course,
+        completed=True
+    ).count()
+
     total_lessons = lessons.count()
     progress_percent = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
 
-    completed_ids = Progress.objects.filter(student=request.user, lesson__course=course, completed=True).values_list('lesson_id', flat=True)
+    completed_ids = Progress.objects.filter(
+        student=student,
+        lesson__course=course,
+        completed=True
+    ).values_list('lesson_id', flat=True)
+
     next_lesson = lessons.exclude(id__in=completed_ids).order_by('order').first()
 
     if completed_lessons == 1:
         badge = "Starter Learner"
     elif completed_lessons == total_lessons:
         badge = "Course Master"
+    else:
+        badge = None  # Avoid undefined variable
 
     return render(request, 'main/course_detail.html', {
         'course': course,
@@ -72,7 +105,7 @@ def course_detail(request, course_id):
         'progress_percent': progress_percent,
         'badge': badge,
         'next_lesson': next_lesson,
-        'completed_ids': completed_ids,
+        'completed_ids': list(completed_ids),  # Ensure it's a list
         'now': timezone.now(),
     })
 
@@ -239,6 +272,38 @@ def progress_leaderboard_view(request):
         'total_time_spent': total_duration,
     })
 
+
+
+
+@login_required
+def enroll_in_course(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+
+    # Get the student profile
+    student = getattr(request.user, 'student_profile', None)
+    if not student:
+        messages.error(request, "You do not have a student profile.")
+        return redirect('course_list')
+
+    # Check if already enrolled (via any progress)
+    if Progress.objects.filter(student=student, lesson__course=course).exists():
+        messages.info(request, "You're already enrolled in this course.")
+    else:
+        # Enroll by creating progress for the first lesson (not marked as complete)
+        first_lesson = course.lessons.order_by('order', 'id').first()
+        if first_lesson:
+            with transaction.atomic():
+                Progress.objects.create(
+                    student=student,
+                    lesson=first_lesson,
+                    completed=False,
+                    completed_at=None
+                )
+            messages.success(request, f"You've successfully enrolled in '{course.title}'! 🎉")
+        else:
+            messages.warning(request, "This course has no lessons yet.")
+
+    return redirect('course_detail', course_id=course.id)
 
 
 

@@ -7,7 +7,9 @@ charset-normalizer==3.4.2
 click==8.2.1
 cookiecutter==2.6.0
 Django==5.2.1
+django-admin-interface==0.30.1
 django-browser-reload==1.18.0
+django-colorfield==0.14.0
 django-tailwind==4.0.1
 idna==3.10
 Jinja2==3.1.6
