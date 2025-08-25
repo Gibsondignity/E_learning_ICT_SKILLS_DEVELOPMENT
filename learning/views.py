@@ -57,6 +57,15 @@ def course_detail(request, course_id):
     # Try to get the Student profile using the correct related_name
     student = getattr(request.user, 'student_profile', None)
 
+    # Initialize variables for both cases (with and without student)
+    completed_lessons = 0
+    total_lessons = lessons.count()
+    progress_percent = 0
+    badge = None
+    next_lesson = None
+    completed_ids = []
+    is_enrolled = False
+
     if not student:
         # If user has no linked Student profile
         return render(request, 'main/course_detail.html', {
@@ -67,10 +76,15 @@ def course_detail(request, course_id):
             'progress_percent': progress_percent,
             'badge': badge,
             'next_lesson': next_lesson,
-            'completed_ids': list(completed_ids),
+            'completed_ids': completed_ids,
             'now': timezone.now(),
-            'student': student,  # 👈 Add this!
+            'student': student,
+            'is_enrolled': is_enrolled,
         })
+
+    # Check if student is enrolled in this course
+    from .models import CourseEnrollment
+    is_enrolled = CourseEnrollment.objects.filter(student=student, course=course).exists()
 
     # Now safely use the student object
     completed_lessons = Progress.objects.filter(
@@ -107,6 +121,7 @@ def course_detail(request, course_id):
         'next_lesson': next_lesson,
         'completed_ids': list(completed_ids),  # Ensure it's a list
         'now': timezone.now(),
+        'is_enrolled': is_enrolled,
     })
 
 
@@ -277,6 +292,8 @@ def progress_leaderboard_view(request):
 
 @login_required
 def enroll_in_course(request, course_id):
+    from .models import CourseEnrollment
+    
     course = get_object_or_404(Course, id=course_id)
 
     # Get the student profile
@@ -285,23 +302,30 @@ def enroll_in_course(request, course_id):
         messages.error(request, "You do not have a student profile.")
         return redirect('course_list')
 
-    # Check if already enrolled (via any progress)
-    if Progress.objects.filter(student=student, lesson__course=course).exists():
+    # Check if already enrolled (via CourseEnrollment model)
+    if CourseEnrollment.objects.filter(student=student, course=course).exists():
         messages.info(request, "You're already enrolled in this course.")
     else:
-        # Enroll by creating progress for the first lesson (not marked as complete)
-        first_lesson = course.lessons.order_by('order', 'id').first()
-        if first_lesson:
-            with transaction.atomic():
-                Progress.objects.create(
+        # Enroll student in course
+        with transaction.atomic():
+            CourseEnrollment.objects.create(
+                student=student,
+                course=course
+            )
+            
+            # Also create progress for the first lesson (not marked as complete)
+            first_lesson = course.lessons.order_by('order', 'id').first()
+            if first_lesson:
+                Progress.objects.get_or_create(
                     student=student,
                     lesson=first_lesson,
-                    completed=False,
-                    completed_at=None
+                    defaults={
+                        'completed': False,
+                        'completed_at': None
+                    }
                 )
-            messages.success(request, f"You've successfully enrolled in '{course.title}'! 🎉")
-        else:
-            messages.warning(request, "This course has no lessons yet.")
+            
+        messages.success(request, f"You've successfully enrolled in '{course.title}'! 🎉")
 
     return redirect('course_detail', course_id=course.id)
 

@@ -63,3 +63,6 @@ class RecommendationAdmin(admin.ModelAdmin):
     list_display = ('student', 'course', 'created_at')
     search_fields = ('student__user__username', 'course__title')
     list_filter = ('created_at',)
+
+
+admin.site.unregister(Lesson)
