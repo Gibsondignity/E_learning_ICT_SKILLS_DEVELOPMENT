@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Count, Avg, Sum
-from .models import Course, Lesson, Progress, Recommendation, StudentAnswer, QuizQuestion, LearningSession
+from .models import Course, Lesson, Progress, Recommendation, StudentAnswer, QuizQuestion, LearningSession, Student
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth.decorators import login_required
@@ -66,50 +66,34 @@ def course_detail(request, course_id):
     completed_ids = []
     is_enrolled = False
 
-    if not student:
-        # If user has no linked Student profile
-        return render(request, 'main/course_detail.html', {
-            'course': course,
-            'lessons': lessons,
-            'completed_lessons': completed_lessons,
-            'total_lessons': total_lessons,
-            'progress_percent': progress_percent,
-            'badge': badge,
-            'next_lesson': next_lesson,
-            'completed_ids': completed_ids,
-            'now': timezone.now(),
-            'student': student,
-            'is_enrolled': is_enrolled,
-        })
-
-    # Check if student is enrolled in this course
+    # Check enrollment status regardless of student profile existence
     from .models import CourseEnrollment
-    is_enrolled = CourseEnrollment.objects.filter(student=student, course=course).exists()
+    if student:
+        is_enrolled = CourseEnrollment.objects.filter(student=student, course=course).exists()
+        
+        # Calculate progress for enrolled students
+        completed_lessons = Progress.objects.filter(
+            student=student,
+            lesson__course=course,
+            completed=True
+        ).count()
 
-    # Now safely use the student object
-    completed_lessons = Progress.objects.filter(
-        student=student,
-        lesson__course=course,
-        completed=True
-    ).count()
+        progress_percent = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
 
-    total_lessons = lessons.count()
-    progress_percent = int((completed_lessons / total_lessons) * 100) if total_lessons > 0 else 0
+        completed_ids = Progress.objects.filter(
+            student=student,
+            lesson__course=course,
+            completed=True
+        ).values_list('lesson_id', flat=True)
 
-    completed_ids = Progress.objects.filter(
-        student=student,
-        lesson__course=course,
-        completed=True
-    ).values_list('lesson_id', flat=True)
+        next_lesson = lessons.exclude(id__in=completed_ids).order_by('order').first()
 
-    next_lesson = lessons.exclude(id__in=completed_ids).order_by('order').first()
-
-    if completed_lessons == 1:
-        badge = "Starter Learner"
-    elif completed_lessons == total_lessons:
-        badge = "Course Master"
-    else:
-        badge = None  # Avoid undefined variable
+        if completed_lessons == 1:
+            badge = "Starter Learner"
+        elif completed_lessons == total_lessons:
+            badge = "Course Master"
+        else:
+            badge = None
 
     return render(request, 'main/course_detail.html', {
         'course': course,
@@ -119,8 +103,9 @@ def course_detail(request, course_id):
         'progress_percent': progress_percent,
         'badge': badge,
         'next_lesson': next_lesson,
-        'completed_ids': list(completed_ids),  # Ensure it's a list
+        'completed_ids': list(completed_ids) if completed_ids else [],
         'now': timezone.now(),
+        'student': student,
         'is_enrolled': is_enrolled,
     })
 
@@ -131,9 +116,17 @@ def lesson_detail(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
     course = lesson.course
 
-    # Track progress
+    # Get the Student instance linked to the current user
+    try:
+        student = request.user.student_profile  # because of related_name='student_profile'
+    except Student.DoesNotExist:
+        # Handle case where Student profile doesn't exist
+        # Optionally: create it, or redirect to profile setup
+        return redirect('create_student_profile')  # or some other page
+
+    # Track progress using the Student instance
     progress, created = Progress.objects.get_or_create(
-        student=request.user,
+        student=student,
         lesson=lesson
     )
 
@@ -149,7 +142,6 @@ def lesson_detail(request, lesson_id):
         'progress': progress,
         'now': timezone.now(),
     })
-
 
 
 
@@ -238,6 +230,22 @@ def quiz_result_view(request, lesson_id):
 
     score_percent = int((correct / total) * 100) if total else 0
 
+    # Automatically mark lesson as completed after quiz submission
+    progress, created = Progress.objects.get_or_create(
+        student=student,
+        lesson=lesson,
+        defaults={
+            'completed': True,
+            'completed_at': timezone.now()
+        }
+    )
+    
+    # If progress already existed but wasn't completed, mark it as completed
+    if not created and not progress.completed:
+        progress.completed = True
+        progress.completed_at = timezone.now()
+        progress.save()
+
     return render(request, 'main//quiz_result.html', {
         'lesson': lesson,
         'total': total,
@@ -296,11 +304,12 @@ def enroll_in_course(request, course_id):
     
     course = get_object_or_404(Course, id=course_id)
 
-    # Get the student profile
+    # Get or create the student profile
     student = getattr(request.user, 'student_profile', None)
     if not student:
-        messages.error(request, "You do not have a student profile.")
-        return redirect('course_list')
+        # Create a student profile automatically
+        student = Student.objects.create(user=request.user)
+        messages.info(request, "Student profile created automatically.")
 
     # Check if already enrolled (via CourseEnrollment model)
     if CourseEnrollment.objects.filter(student=student, course=course).exists():

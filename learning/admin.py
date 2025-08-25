@@ -5,7 +5,7 @@ from django.contrib import admin
 from django.contrib.auth.models import User
 from .models import (
     Student, Course, Lesson, QuizQuestion, StudentAnswer,
-    Progress, LearningSession, Recommendation
+    Progress, LearningSession, Recommendation, CourseEnrollment
 )
 
 # Customize the admin site
@@ -65,4 +65,8 @@ class RecommendationAdmin(admin.ModelAdmin):
     list_filter = ('created_at',)
 
 
-admin.site.unregister(Lesson)
+@admin.register(CourseEnrollment)
+class CourseEnrollmentAdmin(admin.ModelAdmin):
+    list_display = ('student', 'course', 'enrolled_at')
+    search_fields = ('student__user__username', 'course__title')
+    list_filter = ('enrolled_at',)
